@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -67,6 +68,7 @@ private val flapShape = RoundedCornerShape(6.dp)
 fun FlipClockScreen() {
     var hour by remember { mutableStateOf("") }
     var minute by remember { mutableStateOf("") }
+    var second by remember { mutableStateOf("") }
     var dayName by remember { mutableStateOf("") }
     var dateNum by remember { mutableStateOf("") }
     var monthName by remember { mutableStateOf("") }
@@ -76,6 +78,7 @@ fun FlipClockScreen() {
             val cal = Calendar.getInstance()
             hour = String.format(Locale.US, "%02d", cal.get(Calendar.HOUR_OF_DAY))
             minute = String.format(Locale.US, "%02d", cal.get(Calendar.MINUTE))
+            second = String.format(Locale.US, "%02d", cal.get(Calendar.SECOND))
             dateNum = String.format(Locale.US, "%02d", cal.get(Calendar.DAY_OF_MONTH))
             dayName = SimpleDateFormat("EEEE", Locale.US).format(cal.time).uppercase()
             monthName = SimpleDateFormat("MMM", Locale.US).format(cal.time).uppercase()
@@ -91,16 +94,21 @@ fun FlipClockScreen() {
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             FlipCard(
                 value = hour,
-                fontSize = 92.sp,
+                fontSize = 58.sp,
                 modifier = Modifier.weight(1f).aspectRatio(1f)
             )
             FlipCard(
                 value = minute,
-                fontSize = 92.sp,
+                fontSize = 58.sp,
+                modifier = Modifier.weight(1f).aspectRatio(1f)
+            )
+            FlipCard(
+                value = second,
+                fontSize = 58.sp,
                 modifier = Modifier.weight(1f).aspectRatio(1f)
             )
         }
@@ -162,6 +170,8 @@ fun FlipClockScreen() {
  * rotation flip whenever the value changes, mimicking a mechanical
  * flip clock leaf turning over.
  */
+private val flipEasing = CubicBezierEasing(0.34f, 1.56f, 0.64f, 1f)
+
 @Composable
 fun FlipCard(value: String, fontSize: androidx.compose.ui.unit.TextUnit, modifier: Modifier = Modifier) {
     var displayed by remember { mutableStateOf(value) }
@@ -173,7 +183,7 @@ fun FlipCard(value: String, fontSize: androidx.compose.ui.unit.TextUnit, modifie
             previous = displayed
             displayed = value
             rotation.snapTo(180f)
-            rotation.animateTo(0f, animationSpec = tween(durationMillis = 350))
+            rotation.animateTo(0f, animationSpec = tween(durationMillis = 420, easing = flipEasing))
         }
     }
 
@@ -189,7 +199,9 @@ fun FlipCard(value: String, fontSize: androidx.compose.ui.unit.TextUnit, modifie
         HalfDigit(text = displayed, top = true, fontSize = fontSize, modifier = Modifier.fillMaxSize())
 
         // Animated flap: shows old value's top half, then rotates down
-        // through 90 degrees (edge-on) to reveal the new value.
+        // through 90 degrees (edge-on) to reveal the new value. The
+        // easing above lets this slightly overshoot past flat before
+        // settling, like a real leaf clacking into place.
         val angle = rotation.value
         if (angle > 90f) {
             Box(
@@ -198,7 +210,7 @@ fun FlipCard(value: String, fontSize: androidx.compose.ui.unit.TextUnit, modifie
                     .graphicsLayer {
                         transformOrigin = TransformOrigin(0.5f, 0f)
                         rotationX = angle
-                        cameraDistance = 24f
+                        cameraDistance = 10f
                     }
             ) {
                 HalfDigit(text = previous, top = true, fontSize = fontSize, modifier = Modifier.fillMaxSize())
@@ -210,11 +222,22 @@ fun FlipCard(value: String, fontSize: androidx.compose.ui.unit.TextUnit, modifie
                     .graphicsLayer {
                         transformOrigin = TransformOrigin(0.5f, 1f)
                         rotationX = -180f + angle
-                        cameraDistance = 24f
+                        cameraDistance = 10f
                     }
             ) {
                 HalfDigit(text = displayed, top = false, fontSize = fontSize, modifier = Modifier.fillMaxSize())
             }
+        }
+
+        // Shadow that darkens the flap as it swings edge-on, like light
+        // catching the fold of a real mechanical leaf mid-turn.
+        val edgeShadow = (1f - (kotlin.math.abs(angle - 90f) / 90f)).coerceIn(0f, 1f) * 0.4f
+        if (edgeShadow > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = edgeShadow))
+            )
         }
     }
 }
