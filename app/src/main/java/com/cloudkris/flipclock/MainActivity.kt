@@ -5,7 +5,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,15 +30,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-
 import androidx.compose.ui.graphics.TransformOrigin
-
 import androidx.compose.ui.graphics.graphicsLayer
-
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,14 +57,16 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private val cardBg = Color.White
-private val cardText = Color.Black
+private val cardBg = Color.Black
+private val cardText = Color(0xFFF5F1E6)
+private val cardOutline = Color(0xFF666666)
+private val retroFont = FontFamily.Monospace
+private val flapShape = RoundedCornerShape(6.dp)
 
 @Composable
 fun FlipClockScreen() {
     var hour by remember { mutableStateOf("") }
     var minute by remember { mutableStateOf("") }
-    var amPm by remember { mutableStateOf("") }
     var dayName by remember { mutableStateOf("") }
     var dateNum by remember { mutableStateOf("") }
     var monthName by remember { mutableStateOf("") }
@@ -73,11 +74,7 @@ fun FlipClockScreen() {
     LaunchedEffect(Unit) {
         while (true) {
             val cal = Calendar.getInstance()
-            val h24 = cal.get(Calendar.HOUR_OF_DAY)
-            var h12 = h24 % 12
-            if (h12 == 0) h12 = 12
-            hour = if (h12 < 10) "0$h12" else "$h12"
-            amPm = if (h24 >= 12) "pm" else "am"
+            hour = String.format(Locale.US, "%02d", cal.get(Calendar.HOUR_OF_DAY))
             minute = String.format(Locale.US, "%02d", cal.get(Calendar.MINUTE))
             dateNum = String.format(Locale.US, "%02d", cal.get(Calendar.DAY_OF_MONTH))
             dayName = SimpleDateFormat("EEEE", Locale.US).format(cal.time).uppercase()
@@ -89,23 +86,23 @@ fun FlipClockScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(20.dp),
         verticalArrangement = Arrangement.Center
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Box(modifier = Modifier.weight(1f)) {
-                FlipCard(value = hour, modifier = Modifier.fillMaxWidth().aspectRatio(1f))
-                Text(
-                    text = amPm,
-                    color = cardText,
-                    fontSize = 16.sp,
-                    modifier = Modifier.padding(start = 12.dp, top = 8.dp)
-                )
-            }
-            FlipCard(value = minute, modifier = Modifier.weight(1f).aspectRatio(1f))
+            FlipCard(
+                value = hour,
+                fontSize = 92.sp,
+                modifier = Modifier.weight(1f).aspectRatio(1f)
+            )
+            FlipCard(
+                value = minute,
+                fontSize = 92.sp,
+                modifier = Modifier.weight(1f).aspectRatio(1f)
+            )
         }
 
         Box(
@@ -113,14 +110,16 @@ fun FlipClockScreen() {
                 .fillMaxWidth()
                 .padding(top = 12.dp)
                 .height(90.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(cardBg),
+                .clip(flapShape)
+                .background(cardBg)
+                .border(BorderStroke(2.dp, cardOutline), flapShape),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = dayName,
                 color = cardText,
-                fontSize = 40.sp,
+                fontSize = 38.sp,
+                fontFamily = retroFont,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp
             )
@@ -132,19 +131,25 @@ fun FlipClockScreen() {
                 .padding(top = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            FlipCard(value = dateNum, modifier = Modifier.weight(1f).aspectRatio(1.2f))
+            FlipCard(
+                value = dateNum,
+                fontSize = 68.sp,
+                modifier = Modifier.weight(1f).aspectRatio(1.2f)
+            )
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .aspectRatio(1.2f)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(cardBg),
+                    .clip(flapShape)
+                    .background(cardBg)
+                    .border(BorderStroke(2.dp, cardOutline), flapShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = monthName,
                     color = cardText,
-                    fontSize = 34.sp,
+                    fontSize = 46.sp,
+                    fontFamily = retroFont,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -158,7 +163,7 @@ fun FlipClockScreen() {
  * flip clock leaf turning over.
  */
 @Composable
-fun FlipCard(value: String, modifier: Modifier = Modifier) {
+fun FlipCard(value: String, fontSize: androidx.compose.ui.unit.TextUnit, modifier: Modifier = Modifier) {
     var displayed by remember { mutableStateOf(value) }
     var previous by remember { mutableStateOf(value) }
     val rotation = remember { Animatable(180f) }
@@ -174,13 +179,14 @@ fun FlipCard(value: String, modifier: Modifier = Modifier) {
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(flapShape)
             .background(cardBg)
+            .border(BorderStroke(2.dp, cardOutline), flapShape)
     ) {
         // Static bottom half of the new value (always visible under the flap)
-        HalfDigit(text = displayed, top = false, modifier = Modifier.fillMaxSize())
+        HalfDigit(text = displayed, top = false, fontSize = fontSize, modifier = Modifier.fillMaxSize())
         // Static top half of the new value (revealed as the flap opens)
-        HalfDigit(text = displayed, top = true, modifier = Modifier.fillMaxSize())
+        HalfDigit(text = displayed, top = true, fontSize = fontSize, modifier = Modifier.fillMaxSize())
 
         // Animated flap: shows old value's top half, then rotates down
         // through 90 degrees (edge-on) to reveal the new value.
@@ -195,7 +201,7 @@ fun FlipCard(value: String, modifier: Modifier = Modifier) {
                         cameraDistance = 24f
                     }
             ) {
-                HalfDigit(text = previous, top = true, modifier = Modifier.fillMaxSize())
+                HalfDigit(text = previous, top = true, fontSize = fontSize, modifier = Modifier.fillMaxSize())
             }
         } else {
             Box(
@@ -207,29 +213,26 @@ fun FlipCard(value: String, modifier: Modifier = Modifier) {
                         cameraDistance = 24f
                     }
             ) {
-                HalfDigit(text = displayed, top = false, modifier = Modifier.fillMaxSize())
+                HalfDigit(text = displayed, top = false, fontSize = fontSize, modifier = Modifier.fillMaxSize())
             }
         }
-
-        // Center divider line
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .align(Alignment.Center)
-                .background(Color.Black.copy(alpha = 0.5f))
-        )
     }
 }
 
 @Composable
-private fun HalfDigit(text: String, top: Boolean, modifier: Modifier = Modifier) {
+private fun HalfDigit(
+    text: String,
+    top: Boolean,
+    fontSize: androidx.compose.ui.unit.TextUnit,
+    modifier: Modifier = Modifier
+) {
     Box(modifier = modifier.clip(HalfClip(top))) {
         Box(modifier = Modifier.fillMaxSize().background(cardBg), contentAlignment = Alignment.Center) {
             Text(
                 text = text,
                 color = cardText,
-                fontSize = 56.sp,
+                fontSize = fontSize,
+                fontFamily = retroFont,
                 fontWeight = FontWeight.Bold
             )
         }
